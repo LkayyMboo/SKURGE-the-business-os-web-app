@@ -1,14 +1,1 @@
-{% extends 'base.html' %}{% block title %}SKURGE — Starting{% endblock %}
-{% block content %}
-<section class="splash-page" id="skurge-splash" aria-label="Starting SKURGE">
- <div class="splash-stack">
-  <div class="splash-name">SKURGE</div>
-  <div class="splash-rule"></div>
-  <div class="splash-subtitle">THE BUSINESS OS</div>
-  <div class="splash-loading"><span class="spinner"></span><span>Starting SKURGE...</span></div>
- </div>
-</section>
-<script>
-(()=>{const splash=document.getElementById('skurge-splash');setTimeout(()=>{if(splash){splash.style.transition='opacity .35s ease';splash.style.opacity='0';setTimeout(()=>{location.replace({{ next_url|tojson }});},360);}},1400);})();
-</script>
-{% endblock %}
+{% extends 'base.html' %}{% block title %}SKURGE — THE BUSINESS OS{% endblock %}{% block public_content %}<main class="splash-page"><div class="splash-glow"></div><div class="splash-brand"><div class="brand-mark huge">S</div><div class="splash-name">SKURGE</div><div class="splash-tag">THE BUSINESS OS</div><div class="splash-line"></div><p>One workspace. Your whole business.</p></div><div class="splash-foot">BUSINESS, CONNECTED.</div><script>setTimeout(()=>location.replace({{ next_url|tojson }}),1900)</script><noscript><a class="button primary" href="{{ next_url }}">Continue</a></noscript></main>{% endblock %}

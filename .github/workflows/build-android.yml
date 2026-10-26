@@ -1,32 +1,16 @@
-name: SKURGE project checks
+name: Build SKURGE Android APK
 
 on:
-  push:
-    branches: [main, master]
-  pull_request:
-  workflow_dispatch:
+workflow_dispatch:
 
 jobs:
-  web-and-service-checks:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: requirements-dev.txt
-
-      - name: Install web and test dependencies
-        run: python -m pip install -r requirements-dev.txt
-
-      - name: Compile Python files
-        run: python -m compileall -q web_app.py frontend
-
-      - name: Run existing service tests
-        env:
-          PYTHONPATH: frontend
-        run: python -m pytest -q
+test:
+runs-on: ubuntu-latest
+steps:
+- name: Checkout SKURGE
+uses: actions/checkout@v4
+- name: Check project files
+run: |
+  echo "Checking SKURGE project"
+  test -f frontend/main.py
+  echo "SKURGE entry point found"

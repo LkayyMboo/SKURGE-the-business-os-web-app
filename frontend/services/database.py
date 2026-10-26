@@ -18,11 +18,10 @@ this is how tests use a temporary, isolated database instead of
 touching real application data.
 """
 
-import os
 import sqlite3
 from pathlib import Path
 
-DEFAULT_DB_PATH = Path(os.getenv("SKURGE_DB_PATH", str(Path(__file__).resolve().parent.parent.parent / "database" / "skurge.db"))).expanduser()
+DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent.parent / "database" / "skurge.db"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
