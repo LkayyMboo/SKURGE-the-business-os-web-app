@@ -1,5 +1,7 @@
+# SKURGE — THE BUSINESS OS
 
+**Ready web build:** see [`README-READY.md`](README-READY.md) for setup and deployment instructions.
 
-## Browser version — SKURGE THE BUSINESS OS
+This package keeps the original Phase 1–11 Kivy/frontend structure and services and adds the browser interface. In this build, a new owner creates their account and business profile together during registration; employee accounts can still join using an employer referral code.
 
-The archive now also includes a Flask web interface in `web_app.py`, templates in `templates/`, and responsive styling/scripts in `static/`. See `README-WEB-SUBMISSION.md` for Windows local-run instructions and the current integration boundaries. The original Kivy application, frontend services, tests, and Phase 9–11 scripts are retained.
+External CIPC, SARS, banking, PayShap and real payroll payment integrations are not enabled by this project. See `README-READY.md` for the precise feature boundaries and persistent-database deployment notes.

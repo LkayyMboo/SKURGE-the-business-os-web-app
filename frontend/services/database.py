@@ -18,6 +18,7 @@ this is how tests use a temporary, isolated database instead of
 touching real application data.
 """
 
+import os
 import sqlite3
 from pathlib import Path
 
@@ -135,7 +136,10 @@ def get_connection(db_path: Path = None) -> sqlite3.Connection:
     db_path lets callers (mainly tests) point at an isolated, temporary
     database file instead of the real one.
     """
-    path = db_path or DEFAULT_DB_PATH
+    # Set SKURGE_DATABASE_PATH to a mounted persistent directory in hosted
+    # deployments (for example /var/data/skurge.db on a Render disk).
+    configured_path = os.getenv("SKURGE_DATABASE_PATH")
+    path = db_path or (Path(configured_path).expanduser() if configured_path else DEFAULT_DB_PATH)
     path.parent.mkdir(parents=True, exist_ok=True)
 
     connection = sqlite3.connect(str(path))

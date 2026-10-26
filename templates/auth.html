@@ -1,1 +1,46 @@
-{% extends 'base.html' %}{% block title %}{{ 'Create account' if mode=='register' else 'Log in' }} · SKURGE{% endblock %}{% block public_content %}<main class="auth-layout"><a class="brand auth-brand" href="{{ url_for('welcome') }}"><span class="brand-mark">S</span><span><b>SKURGE</b><small>THE BUSINESS OS</small></span></a><section class="auth-card"><a class="back-link" href="{{ url_for('welcome') }}">← Back to welcome</a><div class="eyebrow">YOUR BUSINESS STARTS HERE</div><h1>{{ 'Create your account' if mode=='register' else 'Welcome back' }}</h1><p class="muted">{{ 'Set up your secure SKURGE login.' if mode=='register' else 'Sign in to continue to your workspace.' }}</p><form method="post" class="form-stack"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% if mode=='register' %}<label>Full name<input name="full_name" autocomplete="name" required placeholder="Your full name"></label>{% endif %}<label>Email address<input name="email" type="email" autocomplete="email" required placeholder="you@example.com"></label><label>Password<input name="password" type="password" autocomplete="{{ 'new-password' if mode=='register' else 'current-password' }}" minlength="{{ 10 if mode=='register' else 1 }}" required placeholder="{{ 'At least 10 characters' if mode=='register' else 'Your password' }}"></label>{% if mode=='register' %}<label>Employee referral code <span class="optional">(optional)</span><input name="referral_code" value="{{ referral_code|default('') }}" placeholder="Code from your employer" autocapitalize="characters"><small class="field-hint">Use this only if your employer invited you to join their SKURGE workspace.</small></label>{% endif %}<button class="button primary wide" type="submit">{{ 'Create account' if mode=='register' else 'Log in' }} <span>→</span></button></form><div class="auth-switch">{{ 'Already have an account?' if mode=='register' else 'New to SKURGE?' }} <a href="{{ url_for('login') if mode=='register' else url_for('register') }}">{{ 'Log in' if mode=='register' else 'Create an account' }}</a></div></section><div class="auth-footer">SKURGE · THE BUSINESS OS</div></main>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}{{ 'Create account' if mode=='register' else 'Log in' }} · SKURGE{% endblock %}
+{% block public_content %}
+<main class="auth-layout">
+  <a class="brand auth-brand" href="{{ url_for('welcome') }}"><span class="brand-mark">S</span><span><b>SKURGE</b><small>THE BUSINESS OS</small></span></a>
+  <section class="auth-card auth-card-wide">
+    <a class="back-link" href="{{ url_for('welcome') }}">← Back to welcome</a>
+    <div class="eyebrow">YOUR BUSINESS STARTS HERE</div>
+    <h1>{{ 'Create your account' if mode=='register' else 'Welcome back' }}</h1>
+    <p class="muted">{% if mode=='register' %}Create your login and business workspace together in one step.{% else %}Sign in to continue to your workspace.{% endif %}</p>
+    <form method="post" class="form-stack" id="auth-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% if mode=='register' %}
+      <label>Full name<input name="full_name" autocomplete="name" required placeholder="Your full name" value="{{ request.form.get('full_name','') }}"></label>
+      {% endif %}
+      <label>Email address<input name="email" type="email" autocomplete="email" required placeholder="you@example.com" value="{{ request.form.get('email','') }}"></label>
+      <label>Password<input name="password" type="password" autocomplete="{{ 'new-password' if mode=='register' else 'current-password' }}" minlength="{{ 10 if mode=='register' else 1 }}" required placeholder="{{ 'At least 10 characters' if mode=='register' else 'Your password' }}"></label>
+      {% if mode=='register' %}
+      <label>Employee referral code <span class="optional">(only if an employer invited you)</span><input id="referral-code-input" name="referral_code" value="{{ referral_code|default('') }}" placeholder="Leave blank to create your own business" autocapitalize="characters"><small class="field-hint">If you have an employer's code, your account will be linked to their workspace instead.</small></label>
+      <div id="owner-business-fields" class="registration-business-fields" {% if referral_code %}hidden{% endif %}>
+        <div class="eyebrow">BUSINESS PROFILE</div>
+        <h2>Set up your business now</h2>
+        <p class="muted">Your workspace is created when you register—no separate setup step afterward.</p>
+        <label>Business name<input name="business_name" autocomplete="organization" placeholder="e.g. LKAY Industries" data-owner-required value="{{ request.form.get('business_name','') }}"></label>
+        <div class="form-grid">
+          <label>Business type<select name="business_type" data-owner-required><option value="">Choose type</option>{% for x in ['Sole Proprietor','Private Company (Pty Ltd)','Partnership','Non-profit','Co-operative','Other'] %}<option value="{{ x }}" {% if request.form.get('business_type')==x %}selected{% endif %}>{{ x }}</option>{% endfor %}</select></label>
+          <label>Industry<input name="industry" placeholder="e.g. Retail, Technology" data-owner-required value="{{ request.form.get('industry','') }}"></label>
+          <label>Province<select name="province" data-owner-required><option value="">Choose province</option>{% for x in ['Eastern Cape','Free State','Gauteng','KwaZulu-Natal','Limpopo','Mpumalanga','North West','Northern Cape','Western Cape'] %}<option value="{{ x }}" {% if request.form.get('province')==x %}selected{% endif %}>{{ x }}</option>{% endfor %}</select></label>
+          <label>City / town<input name="city" placeholder="Town or city" value="{{ request.form.get('city','') }}"></label>
+          <label>Business email<input name="business_email" type="email" placeholder="business@example.com" value="{{ request.form.get('business_email','') }}"></label>
+          <label>Phone number<input name="business_phone" type="tel" placeholder="Contact number" value="{{ request.form.get('business_phone','') }}"></label>
+          <label>CIPC number <span class="optional">(optional)</span><input name="cipc_number" placeholder="Registration number" value="{{ request.form.get('cipc_number','') }}"></label>
+          <label>Registration status<select name="registration_status">{% for key,label in registration_statuses|default([('draft','Not registered yet'),('registration_in_progress','Registration in progress'),('registered_declared','Registered')]) %}<option value="{{ key }}" {% if request.form.get('registration_status', 'draft')==key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+        </div>
+      </div>
+      <script>
+      (()=>{const code=document.getElementById('referral-code-input');const fields=document.getElementById('owner-business-fields');const required=fields.querySelectorAll('[data-owner-required]');function update(){const employee=code.value.trim().length>0;fields.hidden=employee;required.forEach(el=>{el.required=!employee;});}code.addEventListener('input',update);update();})();
+      </script>
+      {% endif %}
+      <button class="button primary wide" type="submit">{{ 'Create account & workspace' if mode=='register' else 'Log in' }} <span>→</span></button>
+    </form>
+    <div class="auth-switch">{{ 'Already have an account?' if mode=='register' else 'New to SKURGE?' }} <a href="{{ url_for('login') if mode=='register' else url_for('register') }}">{{ 'Log in' if mode=='register' else 'Create an account' }}</a></div>
+  </section>
+  <div class="auth-footer">SKURGE · THE BUSINESS OS</div>
+</main>
+{% endblock %}

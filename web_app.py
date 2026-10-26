@@ -44,7 +44,7 @@ def create_app(test_config=None):
  production=os.getenv('RENDER','').lower()=='true' or os.getenv('FLASK_ENV')=='production'
  secret=os.getenv('SKURGE_SECRET_KEY')
  if production and not secret: raise RuntimeError('Set SKURGE_SECRET_KEY in the Render environment.')
- app.config.update(SECRET_KEY=secret or 'local-development-only-change-me',SESSION_COOKIE_HTTPONLY=True,SESSION_COOKIE_SAMESITE='Lax',SESSION_COOKIE_SECURE=production,MAX_CONTENT_LENGTH=2*1024*1024)
+ app.config.update(SECRET_KEY=secret or 'local-development-only-change-me',SESSION_COOKIE_HTTPONLY=True,SESSION_COOKIE_SAMESITE='Lax',SESSION_COOKIE_SECURE=production,PERMANENT_SESSION_LIFETIME=timedelta(days=14),MAX_CONTENT_LENGTH=2*1024*1024)
  if test_config: app.config.update(test_config)
  CSRFProtect(app); Limiter(get_remote_address,app=app,default_limits=['200 per day','50 per hour'])
  @app.after_request
@@ -90,45 +90,91 @@ def create_app(test_config=None):
  def welcome(): return render_template('welcome.html')
  @app.route('/register',methods=['GET','POST'])
  def register():
+  """Create an owner account and business in one registration flow.
+
+  Employees can still register with a referral code; owners no longer need
+  to complete a separate post-registration setup page.
+  """
   invite=request.args.get('code','').strip().upper() or request.form.get('referral_code','').strip().upper()
   if request.method=='POST':
-   name=request.form.get('full_name','').strip(); email=request.form.get('email','').strip(); password=request.form.get('password','')
-   if len(password)<10: flash('Use a password with at least 10 characters.','error')
+   name=request.form.get('full_name','').strip()
+   email=request.form.get('email','').strip()
+   password=request.form.get('password','')
+   business_fields={
+    'name':request.form.get('business_name','').strip(),
+    'business_type':request.form.get('business_type','').strip(),
+    'industry':request.form.get('industry','').strip(),
+    'registration_status':request.form.get('registration_status',DRAFT).strip(),
+    'province':request.form.get('province','').strip(),
+    'cipc_number':request.form.get('cipc_number','').strip(),
+    'city':request.form.get('city','').strip(),
+    'phone':request.form.get('business_phone','').strip(),
+    'email':request.form.get('business_email','').strip(),
+    'primary_contact_name':name,
+    'tax_status':'',
+   }
+   if len(password)<10:
+    flash('Use a password with at least 10 characters.','error')
+   elif not name or not email:
+    flash('Your full name and email address are required.','error')
+   elif not invite and not all(business_fields[k] for k in ('name','business_type','industry','province')):
+    flash('Complete the business name, type, industry and province to create your workspace.','error')
+   elif business_fields['registration_status'] not in {DRAFT,REGISTRATION_IN_PROGRESS,REGISTERED_DECLARED}:
+    business_fields['registration_status']=DRAFT
    else:
     if invite:
      try:
-      conn=get_connection(); conn.execute('CREATE TABLE IF NOT EXISTS web_employee_invites (id TEXT PRIMARY KEY,business_id TEXT NOT NULL,employee_id TEXT NOT NULL,code_hash TEXT NOT NULL UNIQUE,expires_at TEXT NOT NULL,created_by TEXT NOT NULL,created_at TEXT NOT NULL,used_at TEXT,used_by TEXT)'); conn.commit(); check=conn.execute('SELECT expires_at,used_at FROM web_employee_invites WHERE code_hash=?',(hashlib.sha256(invite.encode()).hexdigest(),)).fetchone(); conn.close()
+      conn=get_connection()
+      conn.execute('CREATE TABLE IF NOT EXISTS web_employee_invites (id TEXT PRIMARY KEY,business_id TEXT NOT NULL,employee_id TEXT NOT NULL,code_hash TEXT NOT NULL UNIQUE,expires_at TEXT NOT NULL,created_by TEXT NOT NULL,created_at TEXT NOT NULL,used_at TEXT,used_by TEXT)')
+      conn.commit()
+      check=conn.execute('SELECT expires_at,used_at FROM web_employee_invites WHERE code_hash=?',(hashlib.sha256(invite.encode()).hexdigest(),)).fetchone()
+      conn.close()
       if not check: raise ValueError('That employee referral code is invalid.')
       if check[1] or datetime.fromisoformat(check[0]) < datetime.now(): raise ValueError('That employee referral code has expired or has already been used.')
      except ValueError as e:
-      flash(str(e),'error'); return render_template('auth.html',mode='register',referral_code=invite)
+      flash(str(e),'error')
+      return render_template('auth.html',mode='register',referral_code=invite,registration_statuses=REGISTRATION_STATUS_CHOICES)
     try:
      user=AuthService.register(name,email,password)
-     session.clear(); session['user']={'id':user.id,'full_name':user.full_name,'email':user.email}
+     session.clear()
+     session.permanent=True
+     session['user']={'id':user.id,'full_name':user.full_name,'email':user.email}
      if invite:
       try:
-       conn=get_connection(); row=conn.execute('SELECT id,business_id,employee_id,code_hash,expires_at,used_at FROM web_employee_invites WHERE code_hash=?',(hashlib.sha256(invite.encode()).hexdigest(),)).fetchone()
+       conn=get_connection()
+       row=conn.execute('SELECT id,business_id,employee_id,code_hash,expires_at,used_at FROM web_employee_invites WHERE code_hash=?',(hashlib.sha256(invite.encode()).hexdigest(),)).fetchone()
        if not row: raise ValueError('That employee referral code is invalid.')
        iid,bid,eid,ch,expires,used=row
        if used or datetime.fromisoformat(expires)<datetime.now(): raise ValueError('That employee referral code has expired or has already been used.')
        conn.execute('INSERT OR IGNORE INTO business_memberships(id,business_id,user_id,role,created_at) VALUES(?,?,?,?,?)',(str(uuid.uuid4()),bid,user.id,'employee',datetime.utcnow().isoformat()))
-       conn.execute('UPDATE web_employee_invites SET used_at=?,used_by=? WHERE id=?',(datetime.utcnow().isoformat(),user.id,iid)); conn.commit(); conn.close()
-       session['employee_business_id']=bid; flash('Account created and linked to your employer’s SKURGE workspace.','success'); return redirect(url_for('module_page',section='dashboard'))
+       conn.execute('UPDATE web_employee_invites SET used_at=?,used_by=? WHERE id=?',(datetime.utcnow().isoformat(),user.id,iid))
+       conn.commit(); conn.close()
+       session['employee_business_id']=bid
+       flash('Account created and linked to your employer’s SKURGE workspace.','success')
+       return redirect(url_for('module_page',section='dashboard'))
       except Exception as e:
        flash(f'Your account was created, but the referral could not be applied: {e}','error')
-     flash('Account created. Now set up your business.','success'); return redirect(url_for('business_setup'))
-    except ValueError as e: flash(str(e),'error')
-  return render_template('auth.html',mode='register',referral_code=invite)
+       return redirect(url_for('module_page',section='dashboard'))
+     try:
+      BusinessService.create_business(owner_user_id=user.id,**business_fields)
+      flash('Your account and business workspace are ready. Welcome to SKURGE.','success')
+      return redirect(url_for('module_page',section='dashboard'))
+     except ValueError as e:
+      flash(f'Your account was created, but the business profile needs attention: {e}','error')
+      return redirect(url_for('business_setup'))
+    except ValueError as e:
+     flash(str(e),'error')
+  return render_template('auth.html',mode='register',referral_code=invite,registration_statuses=REGISTRATION_STATUS_CHOICES)
  @app.route('/login',methods=['GET','POST'])
  def login():
   if request.method=='POST':
    try:
     user=AuthService.login(request.form.get('email',''),request.form.get('password',''))
-    session.clear(); session['user']={'id':user.id,'full_name':user.full_name,'email':user.email}
+    session.clear(); session.permanent=True; session['user']={'id':user.id,'full_name':user.full_name,'email':user.email}
     flash('Welcome back.','success'); conn=get_connection(); member=conn.execute('SELECT 1 FROM business_memberships WHERE user_id=? LIMIT 1',(user.id,)).fetchone(); conn.close()
     return redirect(url_for('module_page',section='dashboard') if (BusinessService.get_business_for_user(user.id) or member) else url_for('business_setup'))
    except ValueError as e: flash(str(e),'error')
-  return render_template('auth.html',mode='login',referral_code='')
+  return render_template('auth.html',mode='login',referral_code='',registration_statuses=REGISTRATION_STATUS_CHOICES)
  @app.post('/logout')
  def logout(): session.clear(); flash('You have been signed out.','success'); return redirect(url_for('welcome'))
  @app.route('/business/setup',methods=['GET','POST'])
