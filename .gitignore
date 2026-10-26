@@ -19,15 +19,3 @@ dist/
 *.apk
 *.aab
 .gradle/
-.env
-.env.*
-!.env.example
-*.db
-*.sqlite
-*.sqlite3
-venv/
-.venv/
-__pycache__/
-*.py[cod]
-build/
-dist/

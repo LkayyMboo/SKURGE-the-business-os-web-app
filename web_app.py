@@ -70,9 +70,65 @@ def create_app(test_config: dict | None = None) -> Flask:
             return view(*args, **kwargs)
         return wrapped
 
+    SECTIONS = [
+        ("dashboard", "Dashboard", "◈"), ("business", "Business", "▦"),
+        ("employees", "Employees", "♙"), ("payroll", "Payroll", "＄"),
+        ("finance", "Finance", "↗"), ("payments", "Payments", "⇄"),
+        ("orders", "Orders", "▤"), ("inventory", "Inventory", "▧"),
+        ("suppliers", "Suppliers", "◇"), ("customers", "Customers", "♧"),
+        ("tax", "Tax", "§"), ("documents", "Documents", "▱"),
+        ("calendar", "Calendar", "▦"), ("network", "Business Network", "◎"),
+        ("notifications", "Notifications", "♢"), ("settings", "Settings", "⚙"),
+    ]
+    SECTION_DESCRIPTIONS = {
+        "dashboard": "Your business at a glance, using the existing SKURGE dashboard service.",
+        "business": "Manage the business profile connected to your workspace.",
+        "employees": "Team records and employee management.",
+        "payroll": "Payroll workspace and employee compensation workflow.",
+        "finance": "Financial records, expenses, income and cash movement.",
+        "payments": "Payment workflows. External payment providers are not connected by default.",
+        "orders": "Order management workspace.",
+        "inventory": "Stock and inventory workspace.",
+        "suppliers": "Supplier records and relationships.",
+        "customers": "Customer records and relationships.",
+        "tax": "Tax workspace. SARS integration is not connected by default.",
+        "documents": "Business documents and required records.",
+        "calendar": "Business calendar and scheduling.",
+        "network": "Business-to-business network workspace.",
+        "notifications": "Workspace notifications.",
+        "settings": "Account and workspace preferences.",
+    }
+
     @app.get("/")
     def index():
-        return redirect(url_for("dashboard" if session.get("user") else "login"))
+        if session.get("user"):
+            return redirect(url_for("splash"))
+        return redirect(url_for("login"))
+
+    @app.get("/splash")
+    def splash():
+        next_url = url_for("module_page", section="dashboard") if session.get("user") else url_for("login")
+        return render_template("splash.html", next_url=next_url)
+
+    @app.get("/app/<section>")
+    @login_required
+    def module_page(section):
+        valid = {item[0] for item in SECTIONS}
+        if section not in valid:
+            return redirect(url_for("module_page", section="dashboard"))
+        user = session["user"]
+        business = BusinessService.get_business_for_user(user["id"])
+        dashboard_data = DashboardService.get_dashboard_data(business) if section == "dashboard" else None
+        label = dict((key, name) for key, name, _ in SECTIONS)[section]
+        symbol = dict((key, sym) for key, _, sym in SECTIONS)[section]
+        descriptions = SECTION_DESCRIPTIONS
+        # Describe existing source functionality honestly; do not imply placeholder screens are complete.
+        module_detail = descriptions[section]
+        module_status = "Service-backed" if section in {"dashboard", "business", "finance", "employees"} else "Port in progress"
+        return render_template("module.html", user=user, business=business, dashboard_data=dashboard_data,
+                               sections=SECTIONS, active=section, label=label, symbol=symbol,
+                               description=descriptions[section], module_detail=module_detail,
+                               module_status=module_status)
 
     @app.route("/register", methods=["GET", "POST"])
     def register():
@@ -100,7 +156,7 @@ def create_app(test_config: dict | None = None) -> Flask:
                 user = AuthService.login(request.form.get("email", ""), request.form.get("password", ""))
                 session.clear()
                 session["user"] = {"id": user.id, "full_name": user.full_name, "email": user.email}
-                return redirect(url_for("dashboard"))
+                return redirect(url_for("splash"))
             except ValueError as exc:
                 flash(str(exc), "error")
         return render_template("auth.html", mode="login")
@@ -114,10 +170,7 @@ def create_app(test_config: dict | None = None) -> Flask:
     @app.get("/dashboard")
     @login_required
     def dashboard():
-        user = session["user"]
-        business = BusinessService.get_business_for_user(user["id"])
-        data = DashboardService.get_dashboard_data(business)
-        return render_template("dashboard.html", user=user, business=business, data=data)
+        return redirect(url_for("module_page", section="dashboard"))
 
     @app.route("/business/setup", methods=["GET", "POST"])
     @login_required

@@ -1,0 +1,14 @@
+{% extends 'base.html' %}{% block title %}SKURGE — Starting{% endblock %}
+{% block content %}
+<section class="splash-page" id="skurge-splash" aria-label="Starting SKURGE">
+ <div class="splash-stack">
+  <div class="splash-name">SKURGE</div>
+  <div class="splash-rule"></div>
+  <div class="splash-subtitle">THE BUSINESS OS</div>
+  <div class="splash-loading"><span class="spinner"></span><span>Starting SKURGE...</span></div>
+ </div>
+</section>
+<script>
+(()=>{const splash=document.getElementById('skurge-splash');setTimeout(()=>{if(splash){splash.style.transition='opacity .35s ease';splash.style.opacity='0';setTimeout(()=>{location.replace({{ next_url|tojson }});},360);}},1400);})();
+</script>
+{% endblock %}

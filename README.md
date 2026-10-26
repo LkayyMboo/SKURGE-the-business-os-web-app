@@ -22,3 +22,18 @@ The existing authentication service documentation explicitly describes it as dev
 ## Android build
 
 The existing Kivy app remains separate from the web adapter. Android builds should use Buildozer in Linux/WSL or a CI runner; a Render web service does not produce an APK. The GitHub Actions workflow checks the project structure only and is not yet an APK build pipeline.
+
+
+## Web parity correction
+
+The browser shell now uses the original `frontend/styles/colors.py` identity palette:
+charcoal/black foundation, SKURGE purple, gold primary actions and sage success states.
+The browser splash is translated from `frontend/screens/splash/splash_screen.py`, and the
+main navigation mirrors `frontend/app/navigation.py`'s 16 sections.
+
+This is a screen/navigation translation layer, not proof that every Kivy-only interaction
+or external integration has already been ported. The original Kivy source and service
+classes remain in this repository. Sections that were placeholders in the source or whose
+browser interactions have not yet been connected are explicitly marked as in progress.
+Test the login, registration, business setup, dashboard, and each module route before using
+real business data or presenting the site as feature-complete.

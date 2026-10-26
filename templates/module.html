@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}{{ label }} · SKURGE{% endblock %}
+{% block content %}
+<div class="app-shell">
+ <aside class="app-sidebar" aria-label="Main navigation">
+  <div class="sidebar-caption">WORKSPACE</div>
+  {% for key, name, symbol in sections %}
+   <a class="sidebar-link {% if key == active %}active{% endif %}" href="{{ url_for('module_page', section=key) }}"><span class="nav-symbol">{{ symbol }}</span><span>{{ name }}</span></a>
+  {% endfor %}
+ </aside>
+ <section class="app-main">
+  <div class="page-heading"><div><div class="eyebrow">SKURGE / WORKSPACE</div><h1>{{ label }}</h1><p class="muted">{{ description }}</p></div>{% if active == 'business' %}<a class="button button-primary" href="{{ url_for('business_setup') }}">Business profile →</a>{% endif %}</div>
+  {% if active == 'dashboard' %}
+   {% if dashboard_data %}
+   <div class="stat-grid">
+    <article class="stat-card"><span>Revenue</span><strong>{{ dashboard_data.revenue }}</strong><small>Recorded income</small></article>
+    <article class="stat-card"><span>Expenses</span><strong>{{ dashboard_data.expenses }}</strong><small>Recorded expenses</small></article>
+    <article class="stat-card"><span>Net cash movement</span><strong>{{ dashboard_data.net_cash_movement }}</strong><small>Income minus expenses</small></article>
+    <article class="stat-card"><span>Active employees</span><strong>{{ dashboard_data.employees }}</strong><small>Current records</small></article>
+   </div>
+   {% endif %}
+   <div class="module-grid">
+    {% for key, name, symbol in sections if key != 'dashboard' %}
+    <a class="module-card" href="{{ url_for('module_page', section=key) }}" style="text-decoration:none;color:inherit"><div class="module-icon">{{ symbol }}</div><h2>{{ name }}</h2><p>Open the {{ name|lower }} workspace.</p><span class="module-status">Open module →</span></a>
+    {% endfor %}
+   </div>
+  {% elif active == 'business' %}
+   <div class="panel"><div class="panel-kicker">BUSINESS PROFILE</div>{% if business %}<h2>{{ business.name }}</h2><p class="muted">{{ business.business_type }} · {{ business.industry }}</p><a class="button button-primary" href="{{ url_for('business_setup') }}">View business profile</a>{% else %}<h2>Set up your business</h2><p class="muted">Create the business profile that anchors your SKURGE workspace.</p><a class="button button-primary" href="{{ url_for('business_setup') }}">Start business setup →</a>{% endif %}</div>
+  {% elif active == 'finance' %}
+   <div class="module-grid"><article class="module-card"><div class="module-icon">↗</div><h2>Transactions</h2><p>Income, expenses and cash movement recorded by the existing service layer.</p><span class="module-status">Service-backed overview</span></article><article class="module-card"><div class="module-icon">◎</div><h2>Financial controls</h2><p>Use the original finance service and repository as the source of truth. Bank/payment integrations are not enabled by this web translation.</p><span class="module-status">Integration not connected</span></article></div>
+  {% else %}
+   <div class="module-grid">
+    <article class="module-card"><div class="module-icon">{{ symbol }}</div><h2>{{ label }} workspace</h2><p>{{ module_detail }}</p><span class="module-status">{{ module_status }}</span></article>
+    <article class="module-card"><div class="module-icon">⌕</div><h2>Workspace navigation</h2><p>This section is now reachable in the web shell. Its original Kivy screen and related services remain in the source tree; any screen that was a placeholder in the source remains marked as such until its service behaviour is ported and tested.</p><span class="module-status">Screen parity audit required</span></article>
+   </div>
+  {% endif %}
+ </section>
+</div>
+{% endblock %}
