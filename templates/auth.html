@@ -30,7 +30,7 @@
           <label>Business email<input name="business_email" type="email" placeholder="business@example.com" value="{{ request.form.get('business_email','') }}"></label>
           <label>Phone number<input name="business_phone" type="tel" placeholder="Contact number" value="{{ request.form.get('business_phone','') }}"></label>
           <label>CIPC number <span class="optional">(optional)</span><input name="cipc_number" placeholder="Registration number" value="{{ request.form.get('cipc_number','') }}"></label>
-          <label>Registration status<select name="registration_status">{% for key,label in registration_statuses|default([('draft','Not registered yet'),('registration_in_progress','Registration in progress'),('registered_declared','Registered')]) %}<option value="{{ key }}" {% if request.form.get('registration_status', 'draft')==key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+          <label>Registration status<select name="registration_status">{% for key,label in (registration_statuses.items() if registration_statuses is mapping else [('draft','Not yet registered'),('registration_in_progress','Registration in progress'),('registered_declared','Registered (as declared by you)')]) %}<option value="{{ key }}" {% if request.form.get('registration_status', 'draft')==key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
         </div>
       </div>
       <script>
