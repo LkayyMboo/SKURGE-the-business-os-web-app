@@ -1,0 +1,2 @@
+# Native Kivy frontend dependencies (desktop/Android build environment).
+Kivy==2.3.1

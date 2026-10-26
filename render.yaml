@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: skurge-business-os
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn web_app:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: SKURGE_SECRET_KEY
+        generateValue: true
+      - key: SKURGE_DB_PATH
+        value: /var/data/skurge.db
+      - key: RENDER
+        value: "true"
+    disk:
+      name: skurge-data
+      mountPath: /var/data
+      sizeGB: 1
